@@ -1,5 +1,3 @@
-def customImage // Declare globally so all stages can access it
-
 pipeline {
     agent any
 
@@ -7,6 +5,9 @@ pipeline {
         NODE_VERSION = '18'
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKER_REGISTRY = 'docker.io/pyroborn'
+        IMAGE_NAME = "your-dockerhub-username/ticket-service"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        DOCKER_CONFIG = "${WORKSPACE}/.docker"
     }
 
     stages {
@@ -29,22 +30,30 @@ pipeline {
             }
         }
 
-        stage('Building Image') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    echo "building docker image"
-                    customImage = docker.build("pyroborn/ticket-service:latest")
+                    sh "docker build -t ${IMAGE_NAME}:latest ."
                 }
             }
         }
-
-        stage('Push Docker Image') {
+        
+        stage('Push to DockerHub') {
             steps {
                 script {
-                    withEnv(["DOCKER_CONFIG=${env.WORKSPACE}/.docker"]) {
-                        docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
-                            customImage.push()
-                        }
+                    // Setup docker config
+                    sh '''
+                        mkdir -p ${DOCKER_CONFIG}
+                        echo '{"auths": {"https://index.docker.io/v1/": {}}}' > ${DOCKER_CONFIG}/config.json
+                    '''
+                    
+                    // Login and push
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKERHUB_PASSWORD', usernameVariable: 'DOCKERHUB_USERNAME')]) {
+                        sh '''
+                            echo "${DOCKERHUB_PASSWORD}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+                            docker push ${IMAGE_NAME}:latest
+                            docker logout
+                        '''
                     }
                 }
             }
