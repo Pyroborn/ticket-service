@@ -13,7 +13,10 @@ RUN npm install --production
 # Bundle app source
 COPY . .
 
-# Expose port
+# Create volume mount point for static files
+VOLUME /app/public
+
+# Expose API port
 EXPOSE 3000
 
 # Start command
