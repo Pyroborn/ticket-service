@@ -43,10 +43,9 @@ pipeline {
             steps {
                 script {
     withEnv(["DOCKER_CONFIG=${env.WORKSPACE}/.docker"]) {
-        docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
-            customImage.push()
-        }
-    }
+                docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
+                    customImage.push()
+                }
 }
 
             }
