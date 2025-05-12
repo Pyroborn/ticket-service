@@ -5,7 +5,7 @@ pipeline {
         NODE_VERSION = '18'
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
         DOCKER_REGISTRY = 'docker.io/pyroborn'
-        IMAGE_NAME = "your-dockerhub-username/ticket-service"
+        IMAGE_NAME = "pyroborn/ticket-service"
         IMAGE_TAG = "${BUILD_NUMBER}"
         DOCKER_CONFIG = "${WORKSPACE}/.docker"
     }
