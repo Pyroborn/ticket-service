@@ -29,39 +29,21 @@ pipeline {
 
         stage('Building Image') {
             steps {
+                script {
                 echo "building docker image"
-                sh 'docker build -t ${DOCKER_REGISTRY}/ticket-service:latest .'
+                 // #sh 'docker build -t ${DOCKER_REGISTRY}/ticket-service:latest .'
+                def customImage = docker.build("ticket-service:latest")
+                }
             }
         }
         
         stage('Push Docker Image') {
             steps {
-                echo "pushing image to registry"
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-    sh '''
-        set -e
-
-        # Set a custom Docker config directory
-        export DOCKER_CONFIG=/tmp/docker-config
-        mkdir -p "$DOCKER_CONFIG"
-
-        # Disable credential helpers entirely by setting credsStore to an empty string
-        echo '{ "credsStore": "" }' > "$DOCKER_CONFIG/config.json"
-
-        # Login to Docker without any graphical environment issues
-        echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
-
-        # Push the Docker image
-        docker push ${DOCKER_REGISTRY}/ticket-service:latest
-
-        # Clean up the Docker configuration directory
-        rm -rf "$DOCKER_CONFIG"
-    '''
-}
-
-
-
-
+                script {
+                    docker.withRegistry('https://hub.docker.com/r/pyroborn/micro-service', 'dockerhub-credentials') {
+                        customImage.push()
+                    }
+                }
             }
         }
     }
