@@ -1,5 +1,8 @@
 const amqp = require('amqplib');
 
+// Mock environment variables
+process.env.RABBITMQ_URL = 'amqp://localhost:5672';
+
 // Import the actual module implementation
 const messageQueue = jest.requireActual('../../services/messageQueue');
 
@@ -49,7 +52,7 @@ describe('Message Queue Service', () => {
         it('should connect to RabbitMQ and create a channel', async () => {
             await messageQueue.init();
             
-            expect(amqp.connect).toHaveBeenCalledWith(messageQueue.url);
+            expect(amqp.connect).toHaveBeenCalledWith(process.env.RABBITMQ_URL);
             expect(mockConnection.createChannel).toHaveBeenCalled();
             expect(mockChannel.assertExchange).toHaveBeenCalledWith(
                 messageQueue.exchangeName,
@@ -74,7 +77,7 @@ describe('Message Queue Service', () => {
             await initPromise;
             
             expect(amqp.connect).toHaveBeenCalledTimes(2);
-            expect(amqp.connect).toHaveBeenCalledWith(messageQueue.url);
+            expect(amqp.connect).toHaveBeenCalledWith(process.env.RABBITMQ_URL);
         });
     });
 
