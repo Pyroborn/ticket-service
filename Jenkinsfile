@@ -38,8 +38,12 @@ pipeline {
             steps {
                 echo "pushing image to registry"
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                sh "echo ${DOCKER_PASS} | docker login docker.io -u ${DOCKER_USER} --password-stdin"
-                sh "docker push ${DOCKER_REGISTRY}/ticket-service:latest"
+                sh '''
+                    mkdir -p /tmp/docker-login
+                    echo ${DOCKER_PASS} | docker login docker.io -u ${DOCKER_USER} --password-stdin
+                    docker push ${DOCKER_REGISTRY}/ticket-service:latest
+                    rm -rf /tmp/docker-login
+                '''
                 }
                 }
                 }
