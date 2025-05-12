@@ -40,12 +40,16 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         export HOME=/tmp/docker-login
-                        mkdir -p $HOME
+                        mkdir -p $HOME/.docker
+                        echo '{ "credsStore": "" }' > $HOME/.docker/config.json
+
                         echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
                         docker push ${DOCKER_REGISTRY}/ticket-service:latest
-                        rm -rf $HOME
+
+                        rm -rf /tmp/docker-login
                     '''
                 }
+
             }
         }
     }
