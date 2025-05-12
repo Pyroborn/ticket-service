@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Service</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #4338ca;
+            --accent-color: #06b6d4;
+            --light-color: #f1f5f9;
+            --dark-color: #1e293b;
+            --border-color: #e2e8f0;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 1.5rem 2rem;
+            margin-bottom: 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        /* Tab navigation */
+        .nav-tabs {
+            display: flex;
+            padding: 0 2rem;
+            background-color: var(--card-background);
+            border-bottom: 1px solid var(--border-color);
+            gap: 1rem;
+        }
+        
+        .nav-tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            color: var(--text-secondary);
+            position: relative;
+            background: transparent;
+            margin-bottom: -1px;
+        }
+        
+        .nav-tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--primary-color);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .nav-tab:hover {
+            color: var(--primary-color);
+        }
+        
+        .nav-tab.active {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .nav-tab.active::after {
+            transform: scaleX(1);
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 0 2.5rem;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Two-column layout */
+        .content-columns {
+            display: flex;
+            height: calc(100vh - 120px);
+            max-height: 1200px;
+        }
+        
+        .column-left {
+            flex: 0 0 450px; /* Wider form column */
+            padding: 20px 30px 20px 0;
+            overflow-y: auto;
+            height: 100%;
+        }
+        
+        .column-right {
+            flex: 1;
+            padding: 20px 0 20px 30px;
+            height: 100%;
+            overflow-y: auto;
+            border-left: 1px solid var(--border-color);
+            min-width: 500px; /* Ensure minimum width for tickets/user cards */
+        }
+        
+        /* Form styling */
+        .ticket-form, .user-form, .file-upload-section {
+            background: var(--card-background);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+        }
+        
+        .form-group input, 
+        .form-group textarea, 
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: var(--light-color);
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            background-color: white;
+        }
+        
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        /* Ticket and user lists */
+        .ticket-list, .user-list {
+            padding-right: 20px;
+            width: 100%;
+        }
+        
+        /* User cards grid layout */
+        #usersList {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .ticket-list h2, .user-list h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--light-color);
+        }
+        
+        .filters {
+            background: var(--card-background);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .filters select {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--light-color);
+            min-width: 200px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .filters select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        /* Ticket styling */
+        .ticket {
+            background-color: white;
+            border-left: 5px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .ticket:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .ticket.priority-low {
+            border-left-color: var(--info-color);
+        }
+        
+        .ticket.priority-medium {
+            border-left-color: var(--warning-color);
+        }
+        
+        .ticket.priority-high {
+            border-left-color: var(--warning-color);
+        }
+        
+        .ticket.priority-urgent {
+            border-left-color: var(--danger-color);
+        }
+        
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .ticket-header h3 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .ticket-body {
+            margin-bottom: 20px;
+        }
+        
+        .ticket-body p {
+            margin-top: 0;
+            line-height: 1.7;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .ticket-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+            font-size: 1rem;
+            background-color: rgba(0,0,0,0.02);
+            padding: 18px;
+            border-radius: 6px;
+        }
+        
+        .ticket-details span {
+            display: inline-block;
+            padding: 8px 14px;
+            background-color: rgba(52, 152, 219, 0.08);
+            border-radius: 6px;
+            color: #506880;
+            font-weight: 500;
+        }
+        
+        .ticket-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .ticket-actions button {
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            width: auto;
+            border-radius: 6px;
+        }
+        
+        .ticket-actions button:first-child {
+            background-color: #3498db;
+        }
+        
+        .ticket-actions button:last-child {
+            background-color: var(--danger-color);
+        }
+        
+        /* Status badges */
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .status-badge.status-open {
+            background: var(--info-color);
+        }
+        
+        .status-badge.status-in-progress {
+            background: var(--warning-color);
+        }
+        
+        .status-badge.status-resolved {
+            background: var(--success-color);
+        }
+        
+        .status-badge.status-closed {
+            background: var(--text-secondary);
+        }
+        
+        /* User card styling */
+        .user-card {
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            height: 100%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .user-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -8px rgba(79, 70, 229, 0.2);
+        }
+        
+        .user-id {
+            color: #506880;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            background-color: rgba(0,0,0,0.03);
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: inline-block;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+        
+        .user-card h3 {
+            margin: 15px 0;
+            color: var(--text-primary);
+            font-size: 1.5rem;
+        }
+        
+        .user-card p {
+            margin: 15px 0;
+            color: #4a4a4a;
+            font-size: 1.1rem;
+        }
+        
+        /* Modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 30px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 700px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        /* Status history */
+        .status-history-toggle {
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 0.95rem;
+            margin: 15px 0;
+            padding: 6px 12px;
+            display: inline-block;
+            font-weight: 500;
+            background-color: rgba(52, 152, 219, 0.1);
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .status-history-toggle:hover {
+            background-color: rgba(52, 152, 219, 0.2);
+        }
+        
+        .timeline {
+            list-style-type: none;
+            padding: 0;
+            position: relative;
+            margin: 15px 0;
+        }
+        
+        .timeline:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+            left: 10px;
+            margin-left: -1px;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-left: 30px;
+            padding-bottom: 15px;
+        }
+        
+        .timeline-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            position: absolute;
+            left: -25px;
+            top: 5px;
+        }
+        
+        .timeline-content {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1400px) {
+            #usersList {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .content-columns {
+                flex-direction: column;
+                height: auto;
+                max-height: none;
+            }
+            
+            .column-left, .column-right {
+                width: 100%;
+                max-width: none;
+                min-width: 0;
+                padding: 20px 0;
+                height: auto;
+                overflow-y: visible;
+                border-left: none;
+            }
+            
+            .column-right {
+                border-top: 1px solid var(--border-color);
+            }
+            
+            #usersList {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+        }
+        
+        @media (max-width: 768px) {
+            #usersList {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ticket Management System</h1>
+        </header>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-tab="tickets">Tickets</button>
+            <button class="nav-tab" data-tab="users">Users</button>
+            <button class="nav-tab" data-tab="files">Files</button>
+        </div>
+
+        <!-- Tickets Tab -->
+        <div id="tickets-tab" class="tab-content active">
+            <main>
+                <section class="form-section">
+                    <div class="ticket-form">
+                        <h2>Create New Ticket</h2>
+                        <form id="ticketForm">
+                            <div class="form-group">
+                                <label for="title">Title:</label>
+                                <input type="text" id="title" name="title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="description">Description:</label>
+                                <textarea id="description" name="description" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="priority">Priority:</label>
+                                <select id="priority" name="priority">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="assignedTo">Assigned To:</label>
+                                <input type="text" id="assignedTo" name="assignedTo">
+                            </div>
+                            <div class="form-group">
+                                <label for="userId">Your User ID:</label>
+                                <input type="text" id="userId" name="userId" placeholder="Enter your user ID">
+                            </div>
+                            <button type="submit">Create Ticket</button>
+                        </form>
+                    </div>
+                </section>
+                
+                <section class="list-section">
+                    <div class="filters">
+                        <select id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="open">Open</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                        <select id="priorityFilter">
+                            <option value="">All Priorities</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                    <div class="ticket-grid" id="ticketsList">
+                        <!-- Tickets will be rendered here -->
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="users-tab" class="tab-content">
+            <main>
+                <section class="form-section">
+                    <div class="user-form">
+                        <h2>Create New User</h2>
+                        <form id="userForm">
+                            <div class="form-group">
+                                <label for="userId">User ID:</label>
+                                <input type="text" id="userId" name="id" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="userName">Name:</label>
+                                <input type="text" id="userName" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="userRole">Role:</label>
+                                <select id="userRole" name="role">
+                                    <option value="user">User</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <button type="submit">Create User</button>
+                        </form>
+                    </div>
+                </section>
+                
+                <section class="list-section">
+                    <div id="usersList">
+                        <!-- Users will be rendered here -->
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <!-- Files Tab -->
+        <div id="files-tab" class="tab-content">
+            <main>
+                <section class="form-section">
+                    <div class="file-upload-section">
+                        <h2>Upload File</h2>
+                        <form id="fileUploadForm" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="fileInput">Select a file to upload:</label>
+                                <input type="file" id="fileInput" name="file" required>
+                            </div>
+                            <button type="submit" class="upload-btn">Upload File</button>
+                        </form>
+                    </div>
+                </section>
+                
+                <section class="list-section">
+                    <div class="files-list-section">
+                        <h2>Files List</h2>
+                        <div class="files-container" id="filesList">
+                            <!-- Files will be rendered here -->
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Edit Ticket</h2>
+            <form id="editForm">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label for="editTitle">Title:</label>
+                    <input type="text" id="editTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="editDescription">Description:</label>
+                    <textarea id="editDescription" name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editStatus">Status:</label>
+                    <select id="editStatus" name="status">
+                        <option value="open">Open</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editPriority">Priority:</label>
+                    <select id="editPriority" name="priority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editAssignedTo">Assigned To:</label>
+                    <input type="text" id="editAssignedTo" name="assignedTo">
+                </div>
+                <div class="form-group">
+                    <label for="editStatusReason">Status Change Reason:</label>
+                    <input type="text" id="editStatusReason" name="reason" placeholder="Please provide a reason for changing the status" class="form-control">
+                    <small class="status-reason-help text-muted">This reason will be recorded in the ticket's status history.</small>
+                </div>
+                <button type="submit">Update Ticket</button>
+            </form>
+        </div>
+    </div>
+    <script src="/js/app.js"></script>
+</body>
+</html> 
