@@ -47,8 +47,8 @@ pipeline {
                         # Disable credential storage entirely by setting credsStore to an empty string
                         echo '{ "credsStore": "" }' > "$DOCKER_CONFIG/config.json"
 
-                        # Ensure that Docker doesn't try to save credentials, avoid issues related to graphical environment (D-Bus)
-                        echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin --no-include-email
+                        # Docker login without using graphical credential helpers
+                        echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
 
                         docker push ${DOCKER_REGISTRY}/ticket-service:latest
 
@@ -56,6 +56,7 @@ pipeline {
                         rm -rf "$DOCKER_CONFIG"
                     '''
                 }
+
 
 
 
