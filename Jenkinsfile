@@ -1,3 +1,5 @@
+def customImage
+
 pipeline {
     agent any
 
@@ -32,7 +34,7 @@ pipeline {
                 script {
                 echo "building docker image"
                  // #sh 'docker build -t ${DOCKER_REGISTRY}/ticket-service:latest .'
-                def customImage = docker.build("ticket-service:latest")
+                    customImage = docker.build("pyroborn/ticket-service:latest")
                 }
             }
         }
