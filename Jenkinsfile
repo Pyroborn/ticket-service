@@ -38,24 +38,26 @@ pipeline {
             steps {
                 echo "pushing image to registry"
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        set -e
+    sh '''
+        set -e
 
-                        export DOCKER_CONFIG=/tmp/docker-config
-                        mkdir -p "$DOCKER_CONFIG"
+        # Set a custom Docker config directory
+        export DOCKER_CONFIG=/tmp/docker-config
+        mkdir -p "$DOCKER_CONFIG"
 
-                        # Disable credential storage entirely by setting credsStore to an empty string
-                        echo '{ "credsStore": "" }' > "$DOCKER_CONFIG/config.json"
+        # Disable credential helpers entirely by setting credsStore to an empty string
+        echo '{ "credsStore": "" }' > "$DOCKER_CONFIG/config.json"
 
-                        # Docker login without using graphical credential helpers
-                        echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
+        # Login to Docker without any graphical environment issues
+        echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
 
-                        docker push ${DOCKER_REGISTRY}/ticket-service:latest
+        # Push the Docker image
+        docker push ${DOCKER_REGISTRY}/ticket-service:latest
 
-                        # Clean up
-                        rm -rf "$DOCKER_CONFIG"
-                    '''
-                }
+        # Clean up the Docker configuration directory
+        rm -rf "$DOCKER_CONFIG"
+    '''
+}
 
 
 
