@@ -33,11 +33,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Create ConfigMap for Nginx
-                    sh '''
-                        kubectl create configmap nginx-config --from-file=nginx.conf -n microservices --dry-run=client -o yaml | kubectl apply -f -
-                    '''
-                    
                     // Build Docker image
                     sh "docker build -t ${IMAGE_NAME}:latest ."
                 }
