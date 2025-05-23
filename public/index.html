@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket Service</title>
+    <!-- Add Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
     <style>
         :root {
@@ -548,189 +550,295 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Login form styles */
+        .auth-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 2rem;
+            background: var(--card-background);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);
+        }
+
+        .auth-container h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
+        }
+
+        .auth-container .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .auth-container button {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        #login-error {
+            color: var(--danger-color);
+            margin-top: 1rem;
+            text-align: center;
+            display: none;
+        }
     </style>
+    <!-- Add this section to the head of the file, before any other scripts -->
+    <script>
+        // No environment variables needed - using relative paths
+        window.USER_SERVICE_URL = '/api/users'; 
+        window.STATUS_SERVICE_URL = '/api/status';
+        window.DOWNLOADER_SERVICE_URL = '/api/files';
+    </script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Ticket Management System</h1>
-        </header>
-
-        <div class="nav-tabs">
-            <button class="nav-tab active" data-tab="tickets">Tickets</button>
-            <button class="nav-tab" data-tab="users">Users</button>
-            <button class="nav-tab" data-tab="files">Files</button>
-        </div>
-
-        <!-- Tickets Tab -->
-        <div id="tickets-tab" class="tab-content active">
-            <main>
-                <section class="form-section">
-                    <div class="ticket-form">
-                        <h2>Create New Ticket</h2>
-                        <form id="ticketForm">
-                            <div class="form-group">
-                                <label for="title">Title:</label>
-                                <input type="text" id="title" name="title" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="description">Description:</label>
-                                <textarea id="description" name="description" required></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="priority">Priority:</label>
-                                <select id="priority" name="priority">
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
-                                    <option value="urgent">Urgent</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="assignedTo">Assigned To:</label>
-                                <input type="text" id="assignedTo" name="assignedTo">
-                            </div>
-                            <div class="form-group">
-                                <label for="userId">Your User ID:</label>
-                                <input type="text" id="userId" name="userId" placeholder="Enter your user ID">
-                            </div>
-                            <button type="submit">Create Ticket</button>
-                        </form>
-                    </div>
-                </section>
-                
-                <section class="list-section">
-                    <div class="filters">
-                        <select id="statusFilter">
-                            <option value="">All Status</option>
-                            <option value="open">Open</option>
-                            <option value="in-progress">In Progress</option>
-                            <option value="resolved">Resolved</option>
-                            <option value="closed">Closed</option>
-                        </select>
-                        <select id="priorityFilter">
-                            <option value="">All Priorities</option>
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                        </select>
-                    </div>
-                    <div class="ticket-grid" id="ticketsList">
-                        <!-- Tickets will be rendered here -->
-                    </div>
-                </section>
-            </main>
-        </div>
-
-        <!-- Users Tab -->
-        <div id="users-tab" class="tab-content">
-            <main>
-                <section class="form-section">
-                    <div class="user-form">
-                        <h2>Create New User</h2>
-                        <form id="userForm">
-                            <div class="form-group">
-                                <label for="userId">User ID:</label>
-                                <input type="text" id="userId" name="id" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="userName">Name:</label>
-                                <input type="text" id="userName" name="name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="userRole">Role:</label>
-                                <select id="userRole" name="role">
-                                    <option value="user">User</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                            </div>
-                            <button type="submit">Create User</button>
-                        </form>
-                    </div>
-                </section>
-                
-                <section class="list-section">
-                    <div id="usersList">
-                        <!-- Users will be rendered here -->
-                    </div>
-                </section>
-            </main>
-        </div>
-
-        <!-- Files Tab -->
-        <div id="files-tab" class="tab-content">
-            <main>
-                <section class="form-section">
-                    <div class="file-upload-section">
-                        <h2>Upload File</h2>
-                        <form id="fileUploadForm" enctype="multipart/form-data">
-                            <div class="form-group">
-                                <label for="fileInput">Select a file to upload:</label>
-                                <input type="file" id="fileInput" name="file" required>
-                            </div>
-                            <button type="submit" class="upload-btn">Upload File</button>
-                        </form>
-                    </div>
-                </section>
-                
-                <section class="list-section">
-                    <div class="files-list-section">
-                        <h2>Files List</h2>
-                        <div class="files-container" id="filesList">
-                            <!-- Files will be rendered here -->
-                        </div>
-                    </div>
-                </section>
-            </main>
-        </div>
-    </div>
-
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Edit Ticket</h2>
-            <form id="editForm">
-                <input type="hidden" id="editId">
+    <!-- Login Form -->
+    <div id="login-form" style="display: none;">
+        <div class="auth-container">
+            <h2>Login</h2>
+            <form id="auth-form">
                 <div class="form-group">
-                    <label for="editTitle">Title:</label>
-                    <input type="text" id="editTitle" name="title" required>
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" required>
                 </div>
                 <div class="form-group">
-                    <label for="editDescription">Description:</label>
-                    <textarea id="editDescription" name="description" required></textarea>
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" required>
                 </div>
-                <div class="form-group">
-                    <label for="editStatus">Status:</label>
-                    <select id="editStatus" name="status">
-                        <option value="open">Open</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="resolved">Resolved</option>
-                        <option value="closed">Closed</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editPriority">Priority:</label>
-                    <select id="editPriority" name="priority">
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editAssignedTo">Assigned To:</label>
-                    <input type="text" id="editAssignedTo" name="assignedTo">
-                </div>
-                <div class="form-group">
-                    <label for="editStatusReason">Status Change Reason:</label>
-                    <input type="text" id="editStatusReason" name="reason" placeholder="Please provide a reason for changing the status" class="form-control">
-                    <small class="status-reason-help text-muted">This reason will be recorded in the ticket's status history.</small>
-                </div>
-                <button type="submit">Update Ticket</button>
+                <button type="submit" class="btn btn-primary">Login</button>
+                <div id="login-error"></div>
             </form>
         </div>
     </div>
+
+    <!-- Main Content (hidden until authenticated) -->
+    <div id="main-content" style="display: none;">
+        <header>
+            <div id="user-info"></div>
+            <button id="logout-button" class="btn btn-secondary">Logout</button>
+        </header>
+        
+        <div class="container">
+            <h1>Ticket Management</h1>
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="tickets">Tickets</button>
+                <button class="nav-tab" data-tab="users">Users</button>
+                <button class="nav-tab" data-tab="files">Files</button>
+            </div>
+
+            <!-- Tickets Tab -->
+            <div id="tickets-tab" class="tab-content active">
+                <div class="content-columns">
+                    <div class="column-left">
+                        <div class="ticket-form">
+                            <h2>Create New Ticket</h2>
+                            <form id="ticketForm">
+                                <div class="form-group">
+                                    <label for="title">Title:</label>
+                                    <input type="text" id="title" name="title" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="description">Description:</label>
+                                    <textarea id="description" name="description" required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="priority">Priority:</label>
+                                    <select id="priority" name="priority">
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="urgent">Urgent</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="assignedTo">Assigned To:</label>
+                                    <input type="text" id="assignedTo" name="assignedTo">
+                                </div>
+                                <div class="form-group">
+                                    <label for="userId">Your User ID:</label>
+                                    <input type="text" id="userId" name="userId" placeholder="Enter your user ID">
+                                </div>
+                                <button type="submit">Create Ticket</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="column-right">
+                        <div class="filters">
+                            <select id="statusFilter">
+                                <option value="all">All Status</option>
+                                <option value="open">Open</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                            <select id="priorityFilter">
+                                <option value="all">All Priority</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div id="ticketList" class="ticket-list">
+                            <!-- Tickets will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="users-tab" class="tab-content">
+                <main>
+                    <section class="form-section">
+                        <div class="user-form">
+                            <h2>Create New User</h2>
+                            <form id="userForm">
+                                <div class="form-group">
+                                    <label for="userId">User ID:</label>
+                                    <input type="text" id="userId" name="id" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="userName">Name:</label>
+                                    <input type="text" id="userName" name="name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="userEmail">Email:</label>
+                                    <input type="email" id="userEmail" name="email" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="userPassword">Password:</label>
+                                    <input type="password" id="userPassword" name="password" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="userRole">Role:</label>
+                                    <select id="userRole" name="role">
+                                        <option value="user">User</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <button type="submit">Create User</button>
+                            </form>
+                        </div>
+                    </section>
+                    
+                    <section class="list-section">
+                        <div id="usersList">
+                            <!-- Users will be rendered here -->
+                        </div>
+                    </section>
+                </main>
+            </div>
+
+            <!-- Files Tab -->
+            <div id="files-tab" class="tab-content">
+                <main>
+                    <section class="form-section">
+                        <div class="file-upload-section">
+                            <h2>Upload File</h2>
+                            <form id="fileUploadForm" enctype="multipart/form-data" onsubmit="event.preventDefault(); uploadFile(event); return false;">
+                                <div class="form-group">
+                                    <label for="fileInput">Select a file to upload:</label>
+                                    <input type="file" id="fileInput" name="file" required>
+                                </div>
+                                <button type="submit" class="upload-btn btn btn-primary">Upload File</button>
+                            </form>
+                        </div>
+                    </section>
+                    
+                    <section class="list-section">
+                        <div class="files-list-section">
+                            <h2>Files List</h2>
+                            <div class="files-container" id="filesList">
+                                <!-- Files will be rendered here -->
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal - UPDATED for better reliability -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Ticket</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="closeModalHandler()"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" id="editId">
+                        <div class="mb-3">
+                            <label for="editTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="editTitle" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editDescription" name="description" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editStatus" class="form-label">Status</label>
+                            <select class="form-select" id="editStatus" name="status">
+                                <option value="open">Open</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editPriority" class="form-label">Priority</label>
+                            <select class="form-select" id="editPriority" name="priority">
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editAssignedTo" class="form-label">Assigned To</label>
+                            <input type="text" class="form-control" id="editAssignedTo" name="assignedTo">
+                        </div>
+                        <div class="mb-3" id="statusReasonDiv" style="display: none;">
+                            <label for="editStatusReason" class="form-label">Status Change Reason</label>
+                            <input type="text" class="form-control" id="editStatusReason" name="reason">
+                            <div class="form-text">Please provide a reason for changing the status.</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeModalHandler()">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="submitEditForm()">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Add Bootstrap JS at the end of body -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+    <script>
+        // Check if Bootstrap loaded correctly
+        window.addEventListener('DOMContentLoaded', function() {
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap failed to load correctly!');
+                // Try to load it again
+                var script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js';
+                script.integrity = 'sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p';
+                script.crossOrigin = 'anonymous';
+                document.body.appendChild(script);
+            } else {
+                console.log('Bootstrap loaded successfully');
+            }
+        });
+
+        // Simple function to submit the edit form
+        function submitEditForm() {
+            document.getElementById('editForm').dispatchEvent(new Event('submit'));
+        }
+    </script>
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/app.js"></script>
 </body>
 </html> 

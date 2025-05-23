@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const ticketController = require('../controllers/ticketController');
+const authMiddleware = require('../middleware/auth');
+
+// Apply auth middleware to all routes
+router.use(authMiddleware);
 
 // Create a new ticket
 router.post('/', ticketController.createTicket);

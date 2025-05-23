@@ -31,6 +31,11 @@ const ticketSchema = new mongoose.Schema({
     updatedBy: {
         type: String,
         default: null
+    },
+    userId: {
+        type: String,
+        required: true,
+        index: true
     }
 }, {
     timestamps: true

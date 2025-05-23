@@ -5,109 +5,191 @@ const amqp = require('amqplib');
 // Private variables
 let channel = null;
 let connection = null;
-const exchangeName = 'ticket_events';
-const url = process.env.RABBITMQ_URL;
+const EXCHANGE_NAME = 'ticket_events';
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
 
-// Initialize the connection
-const init = async () => {
+// Initialize connection to RabbitMQ
+async function init() {
     try {
-        if (!url) {
-            throw new Error('RABBITMQ_URL environment variable is not set');
+        if (channel) {
+            console.log('RabbitMQ connection already established.');
+            return;
         }
-        connection = await amqp.connect(url);
+
+        console.log(`Connecting to RabbitMQ at ${RABBITMQ_URL}...`);
+        connection = await amqp.connect(RABBITMQ_URL);
         channel = await connection.createChannel();
-        await channel.assertExchange(exchangeName, 'topic', { durable: true });
-        return true;
+        
+        // Create a durable topic exchange for ticket events
+        await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
+        
+        console.log('Successfully connected to RabbitMQ and created exchange.');
+
+        // Add connection event handlers for recovery
+        connection.on('error', (err) => {
+            console.error('RabbitMQ connection error:', err);
+            channel = null;
+            setTimeout(init, 5000);
+        });
+
+        connection.on('close', () => {
+            console.log('RabbitMQ connection closed');
+            channel = null;
+            setTimeout(init, 5000);
+        });
+        
+        return channel;
     } catch (error) {
         console.error('Failed to connect to RabbitMQ:', error);
-        // Schedule reconnection
-        setTimeout(() => init(), 5000);
-        return false;
+        channel = null;
+        setTimeout(init, 5000);
     }
-};
+}
 
 // Helper function to publish events
-const publishEvent = async (routingKey, data) => {
-    if (!channel) {
-        throw new Error('RabbitMQ channel not initialized');
+async function publishEvent(routingKey, data) {
+    try {
+        if (!channel) {
+            await init();
+        }
+        
+        const success = channel.publish(
+            EXCHANGE_NAME,
+            routingKey,
+            Buffer.from(JSON.stringify(data)),
+            { persistent: true }
+        );
+        
+        if (success) {
+            console.log(`Published event to ${routingKey}:`, data);
+        } else {
+            console.error(`Failed to publish event to ${routingKey}`);
+        }
+        
+        return success;
+    } catch (error) {
+        console.error(`Error publishing to ${routingKey}:`, error);
+        return false;
     }
+}
 
-    const message = Buffer.from(JSON.stringify(data));
-    return channel.publish(exchangeName, routingKey, message, {
-        persistent: true,
-        contentType: 'application/json'
-    });
-};
-
-// Public functions
-const publishTicketCreated = async (ticket) => {
+// Publish ticket created event
+async function publishTicketCreated(ticket) {
     return publishEvent('ticket.created', {
-        id: ticket._id,
-        title: ticket.title,
-        status: ticket.status,
-        createdBy: ticket.createdBy
-    });
-};
-
-const publishTicketUpdated = async (ticket, previousStatus) => {
-    if (ticket.status !== previousStatus) {
-        return publishEvent('ticket.status_changed', {
-            id: ticket._id,
+        type: 'ticket.created',
+        data: {
+            id: ticket._id.toString(),
             title: ticket.title,
-            previousStatus,
-            newStatus: ticket.status
-        });
-    }
-};
-
-const publishTicketDeleted = async (ticketId) => {
-    return publishEvent('ticket.deleted', {
-        id: ticketId
+            description: ticket.description,
+            priority: ticket.priority,
+            assignedTo: ticket.assignedTo,
+            createdBy: ticket.createdBy,
+            createdAt: ticket.createdAt,
+            userId: ticket.userId,
+            timestamp: new Date().toISOString()
+        }
     });
-};
+}
 
-const close = async () => {
-    let channelError = null;
-    let connectionError = null;
+// Publish ticket updated event with update reason
+async function publishTicketUpdated(ticket, previousStatus, reason = 'General update') {
+    return publishEvent('ticket.updated', {
+        type: 'ticket.updated',
+        data: {
+            id: ticket._id.toString(),
+            title: ticket.title,
+            description: ticket.description,
+            priority: ticket.priority,
+            assignedTo: ticket.assignedTo, 
+            updatedBy: ticket.updatedBy,
+            previousStatus,
+            currentStatus: ticket.status,
+            reason: reason,
+            timestamp: new Date().toISOString()
+        }
+    });
+}
 
-    // Try to close channel
-    if (channel) {
-        try {
+// Publish ticket status change event
+async function publishTicketStatusChanged(ticketId, previousStatus, newStatus, updatedBy, reason) {
+    return publishEvent('ticket.status.changed', {
+        type: 'ticket.status.changed',
+        data: {
+            id: ticketId,
+            previousStatus,
+            currentStatus: newStatus,
+            updatedBy,
+            reason,
+            timestamp: new Date().toISOString()
+        }
+    });
+}
+
+// Publish ticket assigned event
+async function publishTicketAssigned(ticket, assignedBy, previousAssignee = null) {
+    return publishEvent('ticket.assigned', {
+        type: 'ticket.assigned',
+        data: {
+            id: ticket._id.toString(),
+            title: ticket.title,
+            assignedTo: ticket.assignedTo,
+            assignedBy: assignedBy,
+            previousAssignee,
+            timestamp: new Date().toISOString()
+        }
+    });
+}
+
+// Publish ticket resolved event
+async function publishTicketResolved(ticket, resolvedBy, reason = 'Issue resolved') {
+    return publishEvent('ticket.resolved', {
+        type: 'ticket.resolved',
+        data: {
+            id: ticket._id.toString(),
+            title: ticket.title,
+            resolvedBy,
+            reason,
+            timestamp: new Date().toISOString()
+        }
+    });
+}
+
+// Publish ticket deleted event
+async function publishTicketDeleted(ticketId) {
+    return publishEvent('ticket.deleted', {
+        type: 'ticket.deleted',
+        data: {
+            id: ticketId,
+            timestamp: new Date().toISOString()
+        }
+    });
+}
+
+// Close RabbitMQ connections
+async function close() {
+    try {
+        if (channel) {
             await channel.close();
-        } catch (error) {
-            channelError = error;
-            console.error('Error closing RabbitMQ channel:', error);
-        } finally {
-            channel = null;
         }
-    }
-
-    // Try to close connection
-    if (connection) {
-        try {
+        if (connection) {
             await connection.close();
-        } catch (error) {
-            connectionError = error;
-            console.error('Error closing RabbitMQ connection:', error);
-        } finally {
-            connection = null;
         }
+        console.log('RabbitMQ connections closed');
+    } catch (error) {
+        console.error('Error closing RabbitMQ connections:', error);
+    } finally {
+        channel = null;
+        connection = null;
     }
+}
 
-    // If either operation failed, throw combined error
-    if (channelError || connectionError) {
-        console.error('Error closing RabbitMQ connections:', { channelError, connectionError });
-    }
-};
-
-// Export public functions and properties
 module.exports = {
     init,
     publishTicketCreated,
     publishTicketUpdated,
+    publishTicketStatusChanged,
+    publishTicketAssigned,
+    publishTicketResolved,
     publishTicketDeleted,
-    close,
-    // Properties for testing
-    get url() { return url; },
-    get exchangeName() { return exchangeName; }
+    close
 }; 

@@ -8,6 +8,7 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+.env.*
 
 # Build output
 dist/
@@ -54,4 +55,20 @@ coverage/
 public/uploads/
 
 # Generated documentation
-docs/ 
+docs/
+
+# Credentials and sensitive data
+*credentials*
+*secret*
+*.key
+*.pem
+*.cert
+*.p12
+*password*
+*token*
+*auth*
+*login*.json
+*login*.txt 
+
+nginx.conf
+.env.*
