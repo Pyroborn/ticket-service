@@ -70,5 +70,5 @@ docs/
 *login*.json
 *login*.txt 
 
-nginx.conf
+nginx.*.conf
 .env.*
