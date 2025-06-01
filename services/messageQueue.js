@@ -191,5 +191,8 @@ module.exports = {
     publishTicketAssigned,
     publishTicketResolved,
     publishTicketDeleted,
-    close
+    close,
+    get isConnected() {
+        return channel !== null && connection !== null;
+    }
 }; 

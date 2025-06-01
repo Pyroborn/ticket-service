@@ -215,7 +215,42 @@ app.use('/api/auth', authRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', service: 'ticket-service' });
+});
+
+// Kubernetes liveness probe endpoint
+app.get('/health/live', (req, res) => {
+    console.log('Liveness probe called');
+    res.status(200).json({ status: 'live', service: 'ticket-service' });
+});
+
+// Kubernetes readiness probe endpoint
+app.get('/health/ready', (req, res) => {
+    // Check if MongoDB is connected
+    const isMongoConnected = mongoose.connection.readyState === 1;
+    
+    // Check if message queue service is initialized (if applicable)
+    const isMessageQueueReady = services.isReady ? services.isReady() : true;
+    
+    if (isMongoConnected && isMessageQueueReady) {
+        console.log('Readiness probe: service is ready');
+        res.status(200).json({ 
+            status: 'ready', 
+            service: 'ticket-service',
+            mongo: isMongoConnected,
+            services: isMessageQueueReady
+        });
+    } else {
+        console.log('Readiness probe: service not ready', { 
+            mongo: isMongoConnected, 
+            services: isMessageQueueReady 
+        });
+        res.status(503).json({ 
+            status: 'not ready', 
+            mongo: isMongoConnected,
+            services: isMessageQueueReady
+        });
+    }
 });
 
 let server;

@@ -111,6 +111,18 @@ class ServiceContainer {
             errors: closeErrors
         };
     }
+
+    // Check if critical services are ready
+    isReady() {
+        // Check message queue readiness
+        const isMessageQueueReady = this.messageQueue && this.messageQueue.isConnected;
+        
+        // Add any other critical service checks here
+        const isStatusServiceReady = this.statusService !== undefined;
+        
+        // Return true only if all critical services are ready
+        return isMessageQueueReady && isStatusServiceReady;
+    }
 }
 
 // Export a singleton instance
