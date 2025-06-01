@@ -201,7 +201,8 @@ pipeline {
                                         perl -i -pe "s#^(\\s+)image: ${IMAGE_NAME}:[^\\n]*#\$1image: ${IMAGE_NAME}:${BUILD_NUMBER}#g" deployments/ticket-service/deployment.yaml
                                     else
                                         echo "WARNING: Could not find image line near 'name: ticket-service'. Please check the deployment file structure."
-                                        cat deployments/ticket-service/deployment.yaml
+                                        # If image line not found, try to insert it with proper indentation after the name line
+                                        perl -i -pe "s#^(\\s+)- name: ticket-service\\n#\$1- name: ticket-service\\n\$1  image: ${IMAGE_NAME}:${BUILD_NUMBER}\\n#g" deployments/ticket-service/deployment.yaml
                                     fi
                                     
                                     echo "Updated content:"
