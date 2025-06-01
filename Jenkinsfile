@@ -8,6 +8,8 @@ pipeline {
         IMAGE_NAME = 'pyroborn/ticket-service'
         IMAGE_TAG = "${BUILD_NUMBER}"
         DOCKER_CONFIG = "${WORKSPACE}/.docker"
+        GIT_REPO_URL = 'https://github.com/Pyroborn/k8s-argoCD.git'
+        GIT_CREDENTIALS_ID = 'github-credentials'
     }
 
     stages {
@@ -143,6 +145,91 @@ pipeline {
                             docker push ${IMAGE_NAME}:latest
                             docker logout
                         '''
+                    }
+                }
+            }
+        }
+
+         stage('Update GitOps Repository') {
+            steps {
+                script {
+                    // Temporary directory for GitOps repo
+                    sh 'rm -rf gitops-repo && mkdir -p gitops-repo'
+                    
+                    // Clone with Jenkins GitSCM
+                    dir('gitops-repo') {
+                        // Use the built-in Git SCM to clone
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: '*/main']],
+                            extensions: [
+                                [$class: 'CleanBeforeCheckout'], 
+                                [$class: 'CloneOption', depth: 1, noTags: false, reference: '', shallow: true]
+                            ],
+                            userRemoteConfigs: [[
+                                url: "${GIT_REPO_URL}",
+                                credentialsId: "${GIT_CREDENTIALS_ID}"
+                            ]]
+                        ])
+                        
+                        // Set up Git with credentials for push
+                        withCredentials([usernamePassword(
+                            credentialsId: "${GIT_CREDENTIALS_ID}",
+                            usernameVariable: 'GIT_USERNAME',
+                            passwordVariable: 'GIT_PASSWORD'
+                        )]) {
+                            sh """
+                                # Configure Git
+                                git config user.email "jenkins@example.com"
+                                git config user.name "Jenkins CI"
+                                
+                                # Verify we can access the deployment file
+                                ls -la deployments/ || echo "Deployments directory not found"
+                                ls -la deployments/ticket-service/ || echo "Ticket service directory not found"
+                                
+                                if [ -f deployments/ticket-service/deployment.yaml ]; then
+                                    echo "Found deployment file. Current content:"
+                                    cat deployments/ticket-service/deployment.yaml
+                                    
+                                    # Update image tag with proper regex - target only the line after 'name: ticket-service'
+                                    echo "Updating image tag to ${IMAGE_NAME}:${BUILD_NUMBER}"
+                                    
+                                    # First check if we can find the container section
+                                    if grep -A 5 "name: ticket-service" deployments/ticket-service/deployment.yaml | grep -q "image:"; then
+                                        echo "Found image line near 'name: ticket-service', updating it..."
+                                        # Only update the image line, NOT the name line
+                                        perl -i -pe "s#^(\\s+)image: ${IMAGE_NAME}:[^\\n]*#\$1image: ${IMAGE_NAME}:${BUILD_NUMBER}#g" deployments/ticket-service/deployment.yaml
+                                    else
+                                        echo "WARNING: Could not find image line near 'name: ticket-service'. Please check the deployment file structure."
+                                        cat deployments/ticket-service/deployment.yaml
+                                    fi
+                                    
+                                    echo "Updated content:"
+                                    cat deployments/ticket-service/deployment.yaml
+                                    
+                                    # Check for changes
+                                    if git diff --quiet deployments/ticket-service/deployment.yaml; then
+                                        echo "No changes detected in deployment file"
+                                    else
+                                        echo "Changes detected, committing..."
+                                        git add deployments/ticket-service/deployment.yaml
+                                        git commit -m "Update ticket-service image to ${BUILD_NUMBER}"
+                                        
+                                        # Set up remote URL with credentials
+                                        git remote set-url origin https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/Pyroborn/k8s-argoCD.git
+                                        
+                                        # Push changes
+                                        git push origin HEAD:main
+                                        echo "Successfully pushed changes to GitOps repository"
+                                    fi
+                                else
+                                    echo "ERROR: Deployment file not found at deployments/ticket-service/deployment.yaml"
+                                    # List directory structure to help diagnose
+                                    find . -type f -name "*.yaml" | sort
+                                    exit 1
+                                fi
+                            """
+                        }
                     }
                 }
             }
