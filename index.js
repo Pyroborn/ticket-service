@@ -206,7 +206,7 @@ app.get('/', (req, res) => {
     res.send(html);
 });
 
-// Serve static files
+// Serve static files (keep serving from original directory)
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes

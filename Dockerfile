@@ -13,6 +13,9 @@ RUN npm install --omit=dev
 # Bundle app source
 COPY . .
 
+# Create a directory for static files that will be shared with Nginx
+RUN mkdir -p /app/public
+
 # Stage 2: Create Nginx image for static files
 #FROM nginx:alpine AS nginx
    
@@ -42,5 +45,16 @@ COPY . .
 # Expose API port
 EXPOSE 3005
 
-# Command to run the application
-CMD ["node", "index.js"]
+# Create an entrypoint script to handle file copying
+RUN echo '#!/bin/sh\n\
+# Copy static files to the shared volume if it exists and is mounted\n\
+if [ -d "/app/public" ] && [ -d "/app/shared-public" ] && [ "$(ls -A /app/public)" ]; then\n\
+  echo "Copying static files to shared volume..."\n\
+  cp -r /app/public/* /app/shared-public/\n\
+fi\n\
+# Start the application\n\
+exec node index.js\n\
+' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+# Command to run the application with entrypoint script
+CMD ["/app/entrypoint.sh"]
