@@ -47,12 +47,27 @@ EXPOSE 3005
 
 # Create an entrypoint script to handle file copying
 RUN echo '#!/bin/sh\n\
+set -e\n\
+\n\
 # Copy static files to the shared volume if it exists and is mounted\n\
-if [ -d "/app/public" ] && [ -d "/app/shared-public" ] && [ "$(ls -A /app/public)" ]; then\n\
+if [ -d "/app/public" ] && [ -d "/app/shared-public" ]; then\n\
   echo "Copying static files to shared volume..."\n\
-  cp -r /app/public/* /app/shared-public/\n\
+  if [ "$(ls -A /app/public)" ]; then\n\
+    cp -rv /app/public/* /app/shared-public/\n\
+    echo "Static files copied successfully."\n\
+  else\n\
+    echo "Warning: No files found in /app/public to copy."\n\
+  fi\n\
+else\n\
+  echo "Warning: Either /app/public or /app/shared-public directory does not exist."\n\
+  ls -la /app\n\
+  if [ -d "/app/shared-public" ]; then\n\
+    ls -la /app/shared-public\n\
+  fi\n\
 fi\n\
+\n\
 # Start the application\n\
+echo "Starting Node.js application..."\n\
 exec node index.js\n\
 ' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
