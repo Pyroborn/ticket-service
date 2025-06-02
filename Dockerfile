@@ -45,31 +45,11 @@ RUN mkdir -p /app/public
 # Expose API port
 EXPOSE 3005
 
-# Create an entrypoint script to handle file copying
-RUN echo '#!/bin/sh\n\
-set -e\n\
-\n\
-# Copy static files to the shared volume if it exists and is mounted\n\
-if [ -d "/app/public" ] && [ -d "/app/shared-public" ]; then\n\
-  echo "Copying static files to shared volume..."\n\
-  if [ "$(ls -A /app/public)" ]; then\n\
-    cp -rv /app/public/* /app/shared-public/\n\
-    echo "Static files copied successfully."\n\
-  else\n\
-    echo "Warning: No files found in /app/public to copy."\n\
-  fi\n\
-else\n\
-  echo "Warning: Either /app/public or /app/shared-public directory does not exist."\n\
-  ls -la /app\n\
-  if [ -d "/app/shared-public" ]; then\n\
-    ls -la /app/shared-public\n\
-  fi\n\
-fi\n\
-\n\
-# Start the application\n\
-echo "Starting Node.js application..."\n\
-exec node index.js\n\
-' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+# Create an entrypoint script in a more reliable way
+RUN printf '#!/bin/sh\nset -e\n\n# Copy static files to the shared volume if it exists and is mounted\nif [ -d "/app/public" ] && [ -d "/app/shared-public" ]; then\n  echo "Copying static files to shared volume..."\n  if [ "$(ls -A /app/public)" ]; then\n    cp -rv /app/public/* /app/shared-public/\n    echo "Static files copied successfully."\n  else\n    echo "Warning: No files found in /app/public to copy."\n  fi\nelse\n  echo "Warning: Either /app/public or /app/shared-public directory does not exist."\n  ls -la /app\n  if [ -d "/app/shared-public" ]; then\n    ls -la /app/shared-public\n  fi\nfi\n\n# Start the application\necho "Starting Node.js application..."\nexec node index.js\n' > /app/entrypoint.sh
+
+# Make sure the script is executable
+RUN chmod +x /app/entrypoint.sh
 
 # Command to run the application with entrypoint script
 CMD ["/app/entrypoint.sh"]
