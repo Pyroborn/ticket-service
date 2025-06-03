@@ -197,12 +197,12 @@ pipeline {
                                     # First check if we can find the container section
                                     if grep -A 5 "name: ticket-service" deployments/ticket-service/deployment.yaml | grep -q "image:"; then
                                         echo "Found image line near 'name: ticket-service', updating it..."
-                                        # Only update the image line, NOT the name line
-                                        perl -i -pe "s#^(\\s+)image: ${IMAGE_NAME}:[^\\n]*#\$1image: ${IMAGE_NAME}:${BUILD_NUMBER}#g" deployments/ticket-service/deployment.yaml
+                                        # Use sed to maintain exact indentation (8 spaces/2 tabs)
+                                        sed -i "s|^\\(        image: ${IMAGE_NAME}:\\).*|\\1${BUILD_NUMBER}|g" deployments/ticket-service/deployment.yaml
                                     else
                                         echo "WARNING: Could not find image line near 'name: ticket-service'. Please check the deployment file structure."
-                                        # If image line not found, try to insert it with proper indentation after the name line
-                                        perl -i -pe "s#^(\\s+)- name: ticket-service\\n#\$1- name: ticket-service\\n\$1  image: ${IMAGE_NAME}:${BUILD_NUMBER}\\n#g" deployments/ticket-service/deployment.yaml
+                                        # Insert image line with proper indentation (8 spaces) after the name line
+                                        sed -i "/^        - name: ticket-service/ a\\        image: ${IMAGE_NAME}:${BUILD_NUMBER}" deployments/ticket-service/deployment.yaml
                                     fi
                                     
                                     echo "Updated content:"
