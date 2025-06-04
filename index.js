@@ -16,7 +16,7 @@ const port = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-// Only proxy in development mode, in Kubernetes we use Ingress
+// Only proxy in development mode, in Kubernetes -> Ingress
 if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
   console.log('Setting up development proxies for microservices');
   
@@ -45,7 +45,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
                           
       const isFileDownload = req.path.includes('/download') || req.path.includes('/files/download');
       
-      // For file uploads, we need special handling to avoid duplicates
+      // For file uploads,special handling to avoid duplicates
       if (isFileUpload) {
         // Custom handling for file uploads (multipart/form-data)
         const proxyReq = http.request(options);
@@ -87,7 +87,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
         return;
       }
       
-      // For file downloads, use an optimized proxy that doesn't lose connection
+      // For file downloads, optimized proxy that doesn't lose connection
       if (isFileDownload) {
         // Add a request ID parameter for tracking download requests
         const requestId = Date.now();
@@ -97,7 +97,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
           options.path += `?proxyRequestId=${requestId}`;
         }
         
-        // Add header to avoid message queue processing
+        // header to avoid message queue processing
         options.headers['X-No-Queue'] = 'true';
         
         // Create request with callback to avoid duplicates
