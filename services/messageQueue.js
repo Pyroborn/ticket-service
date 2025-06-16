@@ -2,13 +2,13 @@
 
 const amqp = require('amqplib');
 
-// Private variables
+// Module variables
 let channel = null;
 let connection = null;
 const EXCHANGE_NAME = 'ticket_events';
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
 
-// Initialize connection to RabbitMQ
+// Initialize RabbitMQ connection
 async function init() {
     try {
         if (channel) {
@@ -20,12 +20,12 @@ async function init() {
         connection = await amqp.connect(RABBITMQ_URL);
         channel = await connection.createChannel();
         
-        // Create a durable topic exchange for ticket events
+        // Create durable topic exchange
         await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
         
         console.log('Successfully connected to RabbitMQ and created exchange.');
 
-        // Add connection event handlers for recovery
+        // Connection recovery handlers
         connection.on('error', (err) => {
             console.error('RabbitMQ connection error:', err);
             channel = null;
@@ -46,7 +46,7 @@ async function init() {
     }
 }
 
-// Helper function to publish events
+// Event publishing function
 async function publishEvent(routingKey, data) {
     try {
         if (!channel) {
@@ -73,7 +73,7 @@ async function publishEvent(routingKey, data) {
     }
 }
 
-// Publish ticket created event
+// Ticket creation event
 async function publishTicketCreated(ticket) {
     return publishEvent('ticket.created', {
         type: 'ticket.created',
@@ -91,7 +91,7 @@ async function publishTicketCreated(ticket) {
     });
 }
 
-// Publish ticket updated event with update reason
+// Ticket update event
 async function publishTicketUpdated(ticket, previousStatus, reason = 'General update') {
     return publishEvent('ticket.updated', {
         type: 'ticket.updated',
@@ -110,7 +110,7 @@ async function publishTicketUpdated(ticket, previousStatus, reason = 'General up
     });
 }
 
-// Publish ticket status change event
+// Status change event
 async function publishTicketStatusChanged(ticketId, previousStatus, newStatus, updatedBy, reason) {
     return publishEvent('ticket.status.changed', {
         type: 'ticket.status.changed',
@@ -125,7 +125,7 @@ async function publishTicketStatusChanged(ticketId, previousStatus, newStatus, u
     });
 }
 
-// Publish ticket assigned event
+// Assignment event
 async function publishTicketAssigned(ticket, assignedBy, previousAssignee = null) {
     return publishEvent('ticket.assigned', {
         type: 'ticket.assigned',
@@ -140,7 +140,7 @@ async function publishTicketAssigned(ticket, assignedBy, previousAssignee = null
     });
 }
 
-// Publish ticket resolved event
+// Resolution event
 async function publishTicketResolved(ticket, resolvedBy, reason = 'Issue resolved') {
     return publishEvent('ticket.resolved', {
         type: 'ticket.resolved',
@@ -154,7 +154,7 @@ async function publishTicketResolved(ticket, resolvedBy, reason = 'Issue resolve
     });
 }
 
-// Publish ticket deleted event
+// Deletion event
 async function publishTicketDeleted(ticketId) {
     return publishEvent('ticket.deleted', {
         type: 'ticket.deleted',
@@ -165,7 +165,7 @@ async function publishTicketDeleted(ticketId) {
     });
 }
 
-// Close RabbitMQ connections
+// Close connections
 async function close() {
     try {
         if (channel) {

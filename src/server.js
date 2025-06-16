@@ -2,7 +2,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 
 
-// Add proxy routes for local development - Insert this after the middleware setup but before routes
+// Add proxy routes for local development - 
 if (process.env.NODE_ENV !== 'production') {
   console.log('Setting up development proxy middleware for microservices');
   

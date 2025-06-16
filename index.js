@@ -16,19 +16,19 @@ const port = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-// Only proxy in development mode, in Kubernetes -> Ingress
+// Development proxy configuration
 if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
   console.log('Setting up development proxies for microservices');
   
-  // Simple proxy middleware that works with the path-based routing pattern
+  // Path-based routing proxy middleware
   const createProxy = (targetHost, targetPort) => {
     return (req, res) => {
-      // Minimal logging of request
+      // Request logging
       if (!req.path.includes('/health')) {
         console.log(`[PROXY] ${req.method} ${req.path.substring(0, 30)}...`);
       }
       
-      // Create options for the request
+      // Request options
       const options = {
         hostname: targetHost,
         port: targetPort,
@@ -37,7 +37,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
         headers: { ...req.headers }
       };
       
-      // Remove problematic headers
+      // Remove host header
       delete options.headers.host;
       
       const isFileUpload = req.headers['content-type'] && 
@@ -45,9 +45,9 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
                           
       const isFileDownload = req.path.includes('/download') || req.path.includes('/files/download');
       
-      // For file uploads,special handling to avoid duplicates
+      // File upload handling
       if (isFileUpload) {
-        // Custom handling for file uploads (multipart/form-data)
+        // Create request for file upload
         const proxyReq = http.request(options);
         
         proxyReq.on('error', (err) => {
@@ -57,7 +57,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
           }
         });
         
-        // Manual handling of request data to prevent Express from double-processing
+        // Stream request data
         req.on('data', (chunk) => {
           proxyReq.write(chunk);
         });
@@ -66,7 +66,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
           proxyReq.end();
         });
         
-        // Process the response
+        // Process response
         proxyReq.on('response', (proxyRes) => {
           // Copy status and headers
           res.status(proxyRes.statusCode);
@@ -74,7 +74,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
             res.setHeader(key, proxyRes.headers[key]);
           });
           
-          // Forward response data
+          // Stream response data
           proxyRes.on('data', (chunk) => {
             res.write(chunk);
           });
@@ -87,9 +87,9 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
         return;
       }
       
-      // For file downloads, optimized proxy that doesn't lose connection
+      // File download handling
       if (isFileDownload) {
-        // Add a request ID parameter for tracking download requests
+        // Add request tracking ID
         const requestId = Date.now();
         if (options.path.includes('?')) {
           options.path += `&proxyRequestId=${requestId}`;
@@ -97,12 +97,12 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
           options.path += `?proxyRequestId=${requestId}`;
         }
         
-        // header to avoid message queue processing
+        // Bypass message queue
         options.headers['X-No-Queue'] = 'true';
         
-        // Create request with callback to avoid duplicates
+        // Create download request
         const proxyReq = http.request(options, (proxyRes) => {
-          // Track data transfer for debugging
+          // Track data transfer
           let bytesSent = 0;
           
           // Copy response headers
@@ -111,7 +111,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
           // Stream directly to client
           proxyRes.pipe(res);
           
-          // Handle errors in the proxy response
+          // Handle response errors
           proxyRes.on('error', (err) => {
             console.error('Download stream error:', err.message);
             try {
@@ -119,14 +119,14 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
             } catch (endError) {}
           });
           
-          // Optional tracking
+          // Monitor data transfer
           proxyRes.on('data', (chunk) => {
             bytesSent += chunk.length;
           });
           
           // Log completion
           proxyRes.on('end', () => {
-            // Only log summary to avoid noise
+            // Summary logging
             if (proxyRes.statusCode === 200) {
               console.log(`[PROXY] Download completed: ${(bytesSent / 1024).toFixed(1)} KB`);
             } else {
@@ -135,7 +135,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
           });
         });
         
-        // Handle errors in the request
+        // Handle request errors
         proxyReq.on('error', (err) => {
           console.error('Proxy error during file download:', err.message);
           if (!res.headersSent) {
@@ -151,7 +151,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
         return;
       }
       
-      // Standard request handling (JSON APIs, etc.)
+      // Standard API request handling
       const proxyReq = http.request(options);
       
       proxyReq.on('error', (err) => {
@@ -161,7 +161,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
         }
       });
       
-      // For any request with a body (like POST/PUT)
+      // Handle request body for POST/PUT
       if (req.body && Object.keys(req.body).length > 0) {
         const bodyData = JSON.stringify(req.body);
         proxyReq.setHeader('Content-Type', 'application/json');
@@ -181,7 +181,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
         
         console.log(`[PROXY] Response: ${proxyRes.statusCode}`);
         
-        // Forward response data without using pipe to avoid duplicates
+        // Forward response data
         proxyRes.on('data', (chunk) => {
           res.write(chunk);
         });
@@ -193,20 +193,20 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
     };
   };
   
-  // Set up proxy routes for each service
+  // Service proxy routes
   app.use('/api/users', createProxy('localhost', 3003));
   app.use('/api/status', createProxy('localhost', 4001));
   app.use('/api/files', createProxy('localhost', 3004));
 }
 
-// Custom middleware to serve index.html
+// Index HTML server
 app.get('/', (req, res) => {
     const indexPath = path.join(__dirname, 'public', 'index.html');
     let html = fs.readFileSync(indexPath, 'utf8');
     res.send(html);
 });
 
-// Serve static files (keep serving from original directory)
+// Static file serving
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
@@ -218,18 +218,18 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'ticket-service' });
 });
 
-// Kubernetes liveness probe endpoint
+// Kubernetes liveness probe
 app.get('/health/live', (req, res) => {
     console.log('Liveness probe called');
     res.status(200).json({ status: 'live', service: 'ticket-service' });
 });
 
-// Kubernetes readiness probe endpoint
+// Kubernetes readiness probe
 app.get('/health/ready', (req, res) => {
-    // Check if MongoDB is connected
+    // Check MongoDB connection
     const isMongoConnected = mongoose.connection.readyState === 1;
     
-    // Check if message queue service is initialized (if applicable)
+    // Check message queue status
     const isMessageQueueReady = services.isReady ? services.isReady() : true;
     
     if (isMongoConnected && isMessageQueueReady) {
@@ -255,14 +255,14 @@ app.get('/health/ready', (req, res) => {
 
 let server;
 
-// Only initialize services and connect to MongoDB if not in test environment
+// Database and service initialization
 if (process.env.NODE_ENV !== 'test') {
-    // Connect to MongoDB
+    // MongoDB connection
     mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ticket-service', {})
         .then(() => console.log('Connected to MongoDB'))
         .catch(err => console.error('MongoDB connection error:', err));
 
-    // Initialize services
+    // Service initialization
     services.init()
         .then(result => {
             if (result.success) {
@@ -286,7 +286,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Something went wrong!' });
 });
 
-// Only start the server if this file is run directly and not in test mode
+// Server startup for non-test environments
 if (require.main === module && process.env.NODE_ENV !== 'test') {
     server = app.listen(port, () => {
         console.log(`Ticket service listening on port ${port}`);
@@ -313,7 +313,7 @@ if (require.main === module && process.env.NODE_ENV !== 'test') {
         }
     };
 
-    // Handle shutdown signals
+    // Signal handlers
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
 }

@@ -3,11 +3,11 @@ const path = require('path');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
 
-//  proxy routes for local development
+// Development proxy configuration
 if (process.env.NODE_ENV !== 'production') {
   console.log('Setting up development proxy middleware for microservices');
   
-  // Proxy API requests to other services
+  // API service proxies
   app.use('/api/users', createProxyMiddleware({ 
     target: 'http://localhost:3003',
     pathRewrite: {'^/api/users': ''},
@@ -28,7 +28,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 
-// Fallback route handler for the SPA
+// SPA fallback route
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

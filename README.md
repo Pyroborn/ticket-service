@@ -1,6 +1,6 @@
 # Ticket Service Microservice
 
-A modern, responsive ticket management system built with Node.js, Express, and MongoDB. This microservice provides a complete CRUD interface for managing tickets with a clean and intuitive web interface.
+A modern, responsive ticket management system built with Node.js, Express, and MongoDB. This microservice provides a complete CRUD interface for managing local development environment tickets with a web interface.
 
 ## Features
 
@@ -93,26 +93,6 @@ A modern, responsive ticket management system built with Node.js, Express, and M
   timestamps: true     // includes createdAt and updatedAt
 }
 ```
-
-## Future Enhancements
-
-- Integration with notification service (Kafka/RabbitMQ)
-- Monitoring service integration
-- Status service integration
-- User authentication and authorization
-- Ticket comments and history
-- File attachments
-- Email notifications
-
-## Development
-
-To contribute to this project:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## License
 

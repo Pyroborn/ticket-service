@@ -1,13 +1,13 @@
 const Ticket = require('../models/ticket');
 const services = require('../services/serviceContainer');
 
-// Create a new ticket
+// Ticket creation endpoint
 exports.createTicket = async (req, res) => {
     try {
-        // Use authenticated user information from JWT token
+        // Extract user information from JWT
         const { userId, name, email } = req.user;
         
-        // Set the creator information
+        // Prepare ticket data
         const ticketData = {
             ...req.body,
             // If userId is provided in request body, use it; otherwise use from JWT
@@ -20,7 +20,7 @@ exports.createTicket = async (req, res) => {
         const savedTicket = await ticket.save();
 
         try {
-            // Create initial status for the ticket
+            // Initialize ticket status
             await services.statusService.updateStatus(
                 savedTicket._id.toString(),
                 'open',
@@ -34,10 +34,10 @@ exports.createTicket = async (req, res) => {
             // Continue even if status creation fails
         }
 
-        // Publish ticket created event
+        // Publish creation event
         await services.messageQueue.publishTicketCreated(savedTicket);
         
-        // If ticket has an assignee, publish assigned event
+        // Handle assignment notification
         if (savedTicket.assignedTo) {
             try {
                 await services.messageQueue.publishTicketAssigned(
@@ -61,7 +61,7 @@ exports.createTicket = async (req, res) => {
     }
 };
 
-// Get all tickets
+// Retrieve all tickets
 exports.getAllTickets = async (req, res) => {
     try {
         const tickets = await Ticket.find();
@@ -84,7 +84,7 @@ exports.getAllTickets = async (req, res) => {
     }
 };
 
-// Get a single ticket by ID
+// Retrieve ticket by ID
 exports.getTicketById = async (req, res) => {
     try {
         const ticket = await Ticket.findById(req.params.id);
@@ -116,7 +116,7 @@ exports.getTicketById = async (req, res) => {
     }
 };
 
-// Update a ticket
+// Update ticket
 exports.updateTicket = async (req, res) => {
     try {
         const { name, email } = req.user;
@@ -132,7 +132,7 @@ exports.updateTicket = async (req, res) => {
         const newStatus = req.body.status;
         const newAssignee = req.body.assignedTo;
 
-        // If status is being updated, validate the transition
+        // Handle status transition
         if (newStatus && newStatus !== previousStatus) {
             try {
                 const isValidTransition = await services.statusService.validateStatusTransition(
@@ -164,7 +164,7 @@ exports.updateTicket = async (req, res) => {
                     req.body.reason || `Status changed from ${previousStatus} to ${newStatus}`
                 );
                 
-                // If status is resolved, publish resolved event
+                // Handle resolution event
                 if (newStatus === 'resolved') {
                     await services.messageQueue.publishTicketResolved(
                         ticket,
@@ -181,7 +181,7 @@ exports.updateTicket = async (req, res) => {
             }
         }
         
-        // If assignee is being updated, publish assigned event
+        // Handle assignee changes
         if (newAssignee && newAssignee !== previousAssignee) {
             try {
                 await services.messageQueue.publishTicketAssigned(
@@ -199,7 +199,7 @@ exports.updateTicket = async (req, res) => {
         Object.assign(ticket, req.body);
         await ticket.save();
 
-        // Get the latest status information
+        // Retrieve latest status information
         let statusInfo = { currentStatus: ticket.status, history: [] };
         try {
             const status = await services.statusService.getStatus(ticket._id.toString());
@@ -212,14 +212,14 @@ exports.updateTicket = async (req, res) => {
             console.error('Error fetching status info:', error);
         }
 
-        // Combine ticket data with status info
+        // Prepare response with status data
         const ticketResponse = {
             ...ticket.toObject(),
             currentStatus: statusInfo.currentStatus,
             statusHistory: statusInfo.history
         };
 
-        // Publish ticket updated event
+        // Publish update event
         await services.messageQueue.publishTicketUpdated(
             ticket, 
             previousStatus,
@@ -236,7 +236,7 @@ exports.updateTicket = async (req, res) => {
     }
 };
 
-// Delete a ticket
+// Delete ticket
 exports.deleteTicket = async (req, res) => {
     try {
         const ticket = await Ticket.findById(req.params.id);
@@ -244,19 +244,19 @@ exports.deleteTicket = async (req, res) => {
             return res.status(404).json({ message: 'Ticket not found' });
         }
 
-        // Check if user is admin or ticket creator
+        // Verify authorization
         if (req.user.role !== 'admin' && ticket.userId !== req.user.userId) {
             return res.status(403).json({ message: 'Not authorized to delete this ticket' });
         }
 
-        // Save ticket ID and details before deletion for event publishing
+        // Capture data for event
         const ticketId = ticket._id.toString();
         const deletedBy = req.user.name || req.user.email;
         
         // Delete the ticket
         await Ticket.findByIdAndDelete(req.params.id);
         
-        // Publish ticket deleted event
+        // Publish deletion event
         await services.messageQueue.publishTicketDeleted(ticketId);
         
         // Log the deletion

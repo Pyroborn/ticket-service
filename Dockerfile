@@ -1,19 +1,19 @@
 # Stage 1: Build Node.js application
 #FROM node:18-alpine AS app
 FROM node:18-alpine
-# Create app directory
+# Application directory
 WORKDIR /app
 
-# Copy package files
+# Dependencies installation
 COPY package*.json ./
 
-# Install dependencies
+# Production dependencies
 RUN npm install --omit=dev
 
-# Bundle app source
+# Application source
 COPY . .
 
-# Create a directory for static files that will be shared with Nginx
+# Static files directory
 RUN mkdir -p /app/public
 
 # Stage 2: Create Nginx image for static files
@@ -45,11 +45,11 @@ RUN mkdir -p /app/public
 # Expose API port
 EXPOSE 3005
 
-# Create an entrypoint script in a more reliable way
+# Entrypoint script creation
 RUN printf '#!/bin/sh\nset -e\n\n# Copy static files to the shared volume if it exists and is mounted\nif [ -d "/app/public" ] && [ -d "/app/shared-public" ]; then\n  echo "Copying static files to shared volume..."\n  if [ "$(ls -A /app/public)" ]; then\n    cp -rv /app/public/* /app/shared-public/\n    echo "Static files copied successfully."\n  else\n    echo "Warning: No files found in /app/public to copy."\n  fi\nelse\n  echo "Warning: Either /app/public or /app/shared-public directory does not exist."\n  ls -la /app\n  if [ -d "/app/shared-public" ]; then\n    ls -la /app/shared-public\n  fi\nfi\n\n# Start the application\necho "Starting Node.js application..."\nexec node index.js\n' > /app/entrypoint.sh
 
-# Make sure the script is executable
+# Set execution permissions
 RUN chmod +x /app/entrypoint.sh
 
-# Command to run the application with entrypoint script
+# Application startup command
 CMD ["/app/entrypoint.sh"]
